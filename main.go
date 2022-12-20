@@ -35,8 +35,9 @@ func main() {
 		return
 	}
 	if strings.ToLower(decision) == "get" {
-		getPassword()
+		getCli()
 	}
+	fmt.Println("action complete")
 }
 
 func randomize(numLetters uint8) string {
