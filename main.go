@@ -1,11 +1,18 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type storedPassword struct {
@@ -50,6 +57,8 @@ func main() {
 	}
 
 	entry.Password = randomize(uint8(convertedNum))
+
+	entry.store()
 }
 
 func randomize(numLetters uint8) string {
@@ -66,4 +75,34 @@ func randomize(numLetters uint8) string {
 	joinedPassword := strings.Join(password, sep)
 
 	return joinedPassword
+}
+
+func (sp *storedPassword) store() error {
+	godotenv.Load()
+	dsn := os.Getenv("DB_DSN")
+
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		log.Fatal("failed to connect database", err)
+	}
+
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		fmt.Println("could not connect to database")
+		return nil
+	}
+
+	conn.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS password (websiteName varchar(255), username varchar(255), password varchar(255))")
+
+	query := fmt.Sprintf("INSERT INTO password (websiteName, username, password) VALUES (%v, %v, %v);", &sp.WebsiteName, &sp.Username, &sp.Password)
+
+	_, err = conn.ExecContext(ctx, query)
+	if err != nil {
+		log.Fatal("failed to execute query", err)
+	}
+
+	fmt.Println("successfully stored password for ", sp.WebsiteName)
+
+	return nil
 }
