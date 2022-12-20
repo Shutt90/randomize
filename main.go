@@ -23,6 +23,39 @@ type storedPassword struct {
 }
 
 func main() {
+	fmt.Println("Store or Get?")
+	var decision string
+	_, err := fmt.Scanln(&decision)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if strings.ToLower(decision) == "store" {
+		storeCli()
+		return
+	}
+	if strings.ToLower(decision) == "get" {
+		getPassword()
+	}
+}
+
+func randomize(numLetters uint8) string {
+	rand.Seed(time.Now().UnixNano())
+	var password []string
+	var i uint8
+	for i = 0; i < numLetters; i++ {
+		rand := rand.Intn(126-33) + 33
+		letter := fmt.Sprintf("%c", rand)
+		password = append(password, string(letter))
+	}
+
+	var sep string
+	joinedPassword := strings.Join(password, sep)
+
+	return joinedPassword
+}
+
+func storeCli() {
 	fmt.Println("Enter website name: ")
 	var entry storedPassword
 	_, err := fmt.Scanln(&entry.WebsiteName)
@@ -38,7 +71,6 @@ func main() {
 		return
 	}
 
-	// scanner.Scan(entry.WebsiteName)
 	fmt.Println("Number of characters")
 	var chars string
 	n, err := fmt.Scanln(&chars)
@@ -59,26 +91,29 @@ func main() {
 	entry.Password = randomize(uint8(convertedNum))
 	fmt.Println("your password is ", entry.Password)
 
-	entry.store()
+	ctx := context.Background()
+
+	entry.store(ctx)
 }
 
-func randomize(numLetters uint8) string {
-	rand.Seed(time.Now().UnixNano())
-	var password []string
-	var i uint8
-	for i = 0; i < numLetters; i++ {
-		rand := rand.Intn(126-33) + 33
-		letter := fmt.Sprintf("%c", rand)
-		password = append(password, string(letter))
+func getCli() {
+	fmt.Println("Enter website name: ")
+	var websiteName string
+	_, err := fmt.Scanln(&websiteName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	ctx := context.Background()
+	pw, err := getPassword(websiteName, ctx)
+	if err != nil {
+		panic(err)
 	}
 
-	var sep string
-	joinedPassword := strings.Join(password, sep)
-
-	return joinedPassword
+	fmt.Println(pw)
 }
 
-func (sp *storedPassword) store() error {
+func (sp *storedPassword) store(ctx context.Context) error {
 	godotenv.Load()
 	dsn := os.Getenv("DB_DSN")
 
@@ -86,8 +121,8 @@ func (sp *storedPassword) store() error {
 	if err != nil {
 		log.Fatal("failed to connect database", err)
 	}
+	defer db.Close()
 
-	ctx := context.Background()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		fmt.Println("could not connect to database")
@@ -106,4 +141,28 @@ func (sp *storedPassword) store() error {
 	fmt.Println("successfully stored password for ", sp.WebsiteName)
 
 	return nil
+}
+
+func getPassword(websiteName string, ctx context.Context) (string, error) {
+	godotenv.Load()
+	dsn := os.Getenv("DB_DSN")
+
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		log.Fatal("failed to connect database", err)
+	}
+	defer db.Close()
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	var password string
+	err = conn.QueryRowContext(ctx, "SELECT password FROM password WHERE websiteName = ?", websiteName).Scan(password)
+	if err != nil {
+		return "", err
+	}
+
+	return password, nil
 }
