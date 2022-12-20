@@ -57,6 +57,7 @@ func main() {
 	}
 
 	entry.Password = randomize(uint8(convertedNum))
+	fmt.Println("your password is ", entry.Password)
 
 	entry.store()
 }
