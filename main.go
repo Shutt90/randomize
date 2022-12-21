@@ -24,6 +24,7 @@ type storedPassword struct {
 
 func main() {
 	fmt.Println("Store or Get?")
+	godotenv.Load()
 	var decision string
 	_, err := fmt.Scanln(&decision)
 	if err != nil {
@@ -35,8 +36,11 @@ func main() {
 		return
 	}
 	if strings.ToLower(decision) == "get" {
-		getPassword()
+		getCli()
+		return
 	}
+
+	fmt.Println("unknown decision")
 }
 
 func randomize(numLetters uint8) string {
@@ -64,13 +68,15 @@ func storeCli() {
 		return
 	}
 
-	fmt.Println("Enter username: ")
+	if os.Getenv("DEFAULT_USERNAME") != "" {
+		fmt.Println("(default: ", os.Getenv("DEFAULT_USERNAME"), ")", "Enter username: ")
+	}
 	_, err = fmt.Scanln(&entry.Username)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
+	os.Setenv("DEFAULT_USERNAME", entry.Username)
 	fmt.Println("Number of characters")
 	var chars string
 	n, err := fmt.Scanln(&chars)
@@ -115,9 +121,8 @@ func getCli() {
 
 func (sp *storedPassword) store(ctx context.Context) error {
 	godotenv.Load()
-	dsn := os.Getenv("DB_DSN")
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", os.Getenv("DB_DSN"))
 	if err != nil {
 		log.Fatal("failed to connect database", err)
 	}
