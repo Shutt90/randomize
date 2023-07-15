@@ -32,22 +32,26 @@ func main() {
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(320, 480))
 
-	tabs := container.NewAppTabs(
-		container.NewTabItemWithIcon("Home", theme.HomeIcon(), widget.NewLabel("Welcome")),
-		container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(), widget.NewLabel("Passwords")),
+	tabs := container.NewVBox(
+		container.NewAppTabs(
+			container.NewTabItemWithIcon("Home", theme.HomeIcon(), widget.NewLabel("Welcome")),
+			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(), widget.NewLabel("Passwords")),
+		),
 	)
 
-	endTab := container.NewAppTabs(
-		container.NewTabItemWithIcon("Exit", theme.CancelIcon(), widget.NewLabel("Exit")),
+	endTabs := container.NewVBox(
+		container.NewAppTabs(
+			container.NewTabItemWithIcon("Exit", theme.CancelIcon(), widget.NewLabel("Exit")),
+		),
 	)
 
 	spacer := widget.NewSeparator()
 	spacer.BaseWidget.Resize(fyne.Size{
-		Width:  endTab.MinSize().Width,
-		Height: endTab.MinSize().Height,
+		Width:  tabs.MinSize().Width,
+		Height: tabs.MinSize().Height,
 	})
 
-	tabContainer := container.NewHBox(tabs, spacer, endTab)
+	tabContainer := container.NewVBox(tabs, spacer, endTabs)
 
 	myWindow.SetContent(tabContainer)
 
