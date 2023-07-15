@@ -1,8 +1,12 @@
 package helpers
 
 import (
+	"fmt"
 	"image/color"
+	"math/rand"
 	"net/url"
+	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -34,4 +38,20 @@ func CreateTextContainer(textArr []string) *fyne.Container {
 	)
 
 	return textContainer
+}
+
+func Randomize(numLetters uint8) string {
+	rand.Seed(time.Now().UnixNano())
+	var password []string
+	var i uint8
+	for i = 0; i < numLetters; i++ {
+		rand := rand.Intn(126-33) + 33
+		letter := fmt.Sprintf("%c", rand)
+		password = append(password, string(letter))
+	}
+
+	var sep string
+	joinedPassword := strings.Join(password, sep)
+
+	return joinedPassword
 }
