@@ -18,6 +18,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/shutt90/password-generator/helpers.go"
 )
 
 type storedPassword struct {
@@ -27,21 +28,27 @@ type storedPassword struct {
 	Created     time.Time `json:"created"`
 }
 
+var welcomeMessages = []string{
+	"Welcome to Randomize Password Manager",
+	"",
+	"I am constantly looking to improve on this software so please email any suggestions to",
+	"Liam.Pugh.009@gmail.com",
+	"Any feedback is greatly appreciated",
+	"",
+	"I hope you enjoy using the product",
+}
+
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Randomize Password Manager")
-	myWindow.Resize(fyne.NewSize(320, 480))
+	myWindow.Resize(fyne.NewSize(480, 640))
+
+	welcomeContainer := helpers.CreateTextContainer(welcomeMessages)
 
 	tabs := container.NewVBox(
 		container.NewAppTabs(
-			container.NewTabItemWithIcon("Home", theme.HomeIcon(), widget.NewLabel("Welcome")),
+			container.NewTabItemWithIcon("Home", theme.HomeIcon(), welcomeContainer),
 			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(), widget.NewLabel("Passwords")),
-		),
-	)
-
-	endTabs := container.NewVBox(
-		container.NewAppTabs(
-			container.NewTabItemWithIcon("Exit", theme.CancelIcon(), widget.NewLabel("Exit")),
 		),
 	)
 
@@ -51,7 +58,7 @@ func main() {
 		Height: tabs.MinSize().Height,
 	})
 
-	tabContainer := container.NewVBox(tabs, spacer, endTabs)
+	tabContainer := container.NewHBox(tabs, spacer)
 
 	myWindow.SetContent(tabContainer)
 
