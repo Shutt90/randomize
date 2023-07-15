@@ -39,7 +39,14 @@ var welcomeMessages = []string{
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		panic(err)
+	}
+
+	getAllPasswords(context.Background())
 	myApp := app.New()
+
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(480, 640))
 
@@ -109,15 +116,11 @@ func storeCli() {
 		return
 	}
 
-	if os.Getenv("DEFAULT_USERNAME") != "" {
-		fmt.Println("(default: ", os.Getenv("DEFAULT_USERNAME"), ")", "Enter username: ")
-	}
 	_, err = fmt.Scanln(&entry.Username)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	os.Setenv("DEFAULT_USERNAME", entry.Username)
 	fmt.Println("Number of characters")
 	var chars string
 	n, err := fmt.Scanln(&chars)
@@ -161,8 +164,6 @@ func getCli() {
 }
 
 func (sp *storedPassword) store(ctx context.Context) error {
-	godotenv.Load()
-
 	db, err := sql.Open("postgres", os.Getenv("DB_DSN"))
 	if err != nil {
 		log.Fatal("failed to connect database", err)
@@ -190,7 +191,6 @@ func (sp *storedPassword) store(ctx context.Context) error {
 }
 
 func getPassword(websiteName string, ctx context.Context) (string, error) {
-	godotenv.Load()
 	dsn := os.Getenv("DB_DSN")
 
 	db, err := sql.Open("postgres", dsn)
@@ -211,4 +211,41 @@ func getPassword(websiteName string, ctx context.Context) (string, error) {
 	}
 
 	return password, nil
+}
+
+func getAllPasswords(ctx context.Context) ([]storedPassword, error) {
+	dsn := os.Getenv("DB_DSN")
+
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		log.Fatal("failed to connect database", err)
+	}
+	defer db.Close()
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return []storedPassword{}, err
+	}
+
+	rows, err := conn.QueryContext(ctx, "SELECT * FROM password;")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return []storedPassword{}, fmt.Errorf("no passwords found")
+		}
+		return []storedPassword{}, fmt.Errorf("unknown error")
+	}
+
+	var passwords []storedPassword
+
+	for rows.Next() {
+		var password storedPassword
+		err = rows.Scan(&password)
+		if err != nil {
+			break
+		}
+		passwords = append(passwords, password)
+
+	}
+
+	return passwords, nil
 }
