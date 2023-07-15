@@ -11,6 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -23,24 +28,49 @@ type storedPassword struct {
 }
 
 func main() {
-	fmt.Println("Store or Get?")
-	godotenv.Load()
-	var decision string
-	_, err := fmt.Scanln(&decision)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	if strings.ToLower(decision) == "store" {
-		storeCli()
-		return
-	}
-	if strings.ToLower(decision) == "get" {
-		getCli()
-		return
-	}
+	myApp := app.New()
+	myWindow := myApp.NewWindow("Randomize Password Manager")
+	myWindow.Resize(fyne.NewSize(320, 480))
 
-	fmt.Println("unknown decision")
+	tabs := container.NewAppTabs(
+		container.NewTabItemWithIcon("Home", theme.HomeIcon(), widget.NewLabel("Welcome")),
+		container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(), widget.NewLabel("Passwords")),
+	)
+
+	endTab := container.NewAppTabs(
+		container.NewTabItemWithIcon("Exit", theme.CancelIcon(), widget.NewLabel("Exit")),
+	)
+
+	spacer := widget.NewSeparator()
+	spacer.BaseWidget.Resize(fyne.Size{
+		Width:  endTab.MinSize().Width,
+		Height: endTab.MinSize().Height,
+	})
+
+	tabContainer := container.NewHBox(tabs, spacer, endTab)
+
+	myWindow.SetContent(tabContainer)
+
+	myWindow.ShowAndRun()
+
+	// fmt.Println("Store or Get?")
+	// godotenv.Load()
+	// var decision string
+	// _, err := fmt.Scanln(&decision)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	// if strings.ToLower(decision) == "store" {
+	// 	storeCli()
+	// 	return
+	// }
+	// if strings.ToLower(decision) == "get" {
+	// 	getCli()
+	// 	return
+	// }
+
+	// fmt.Println("unknown decision")
 }
 
 func randomize(numLetters uint8) string {
@@ -164,7 +194,7 @@ func getPassword(websiteName string, ctx context.Context) (string, error) {
 	}
 
 	var password string
-	err = conn.QueryRowContext(ctx, "SELECT password FROM password WHERE websiteName = ?", websiteName).Scan(password)
+	err = conn.QueryRowContext(ctx, "SELECT password FROM password WHERE websiteName = ?;", websiteName).Scan(password)
 	if err != nil {
 		return "", err
 	}
