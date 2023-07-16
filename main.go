@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"image/color"
 	"log"
 	"os"
+	"time"
 
 	cockroachDB "github.com/shutt90/password-generator/db"
 	"github.com/shutt90/password-generator/helpers.go"
@@ -30,6 +32,12 @@ var welcomeMessages = []string{
 	"I hope you enjoy using the product",
 }
 
+var fields = []string{
+	"Website",
+	"Username",
+	"Password",
+}
+
 func main() {
 	err := godotenv.Load()
 	ctx := context.Background()
@@ -49,6 +57,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS password (websiteName varchar(255), username varchar(255), password varchar(255))")
 
 	defer conn.Close()
 
@@ -65,17 +74,20 @@ func main() {
 
 	welcomeContainer := helpers.CreateTextContainer(welcomeMessages)
 
-	storePwButton := widget.NewButton("Store", func() {
-		log.Println("tapped")
-	})
+	usernameHeader := canvas.NewText("Username", color.White)
+	passwordHeader := canvas.NewText("Password", color.White)
+	websiteNameHeader := canvas.NewText("Website Name", color.White)
 
-	storePwButton.Alignment = widget.ButtonAlign(fyne.TextAlignCenter)
+	usernameHeader.TextStyle.Bold = true
+	passwordHeader.TextStyle.Bold = true
+	websiteNameHeader.TextStyle.Bold = true
+
 	pwArr := []fyne.CanvasObject{
 		container.NewGridWithColumns(
 			3,
-			canvas.NewText("Username", color.White),
-			canvas.NewText("WebsiteName", color.White),
-			canvas.NewText("Password", color.White),
+			websiteNameHeader,
+			usernameHeader,
+			passwordHeader,
 		),
 	}
 	for _, pass := range passwords {
@@ -97,11 +109,45 @@ func main() {
 		),
 	)
 
+	websiteField := widget.NewEntry()
+	usernameField := widget.NewEntry()
+	passwordField := widget.NewEntry()
+	websiteField.PlaceHolder = "Website Name"
+	usernameField.PlaceHolder = "Login Username"
+	passwordField.PlaceHolder = "Password"
+
+	input := container.NewGridWithColumns(
+		3,
+		websiteField,
+		usernameField,
+		passwordField,
+	)
+
+	storePwButton := widget.NewButton("Store", func() {
+		input := cockroachDB.StoredPassword{
+			WebsiteName: websiteField.Text,
+			Username:    usernameField.Text,
+			Password:    passwordField.Text,
+			Created:     time.Now(),
+		}
+
+		fmt.Println(input)
+
+		cc.Store(input)
+	})
+
+	storePwButton.Alignment = widget.ButtonAlign(fyne.TextAlignCenter)
+
 	tabs := container.NewVBox(
 		container.NewAppTabs(
 			container.NewTabItemWithIcon("Home", theme.HomeIcon(), welcomeContainer),
 			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(),
-				container.NewVBox(pwContainer, storePwButton),
+				container.NewVBox(pwContainer,
+					container.NewVBox(
+						input,
+						storePwButton,
+					),
+				),
 			),
 		),
 	)
@@ -112,28 +158,9 @@ func main() {
 		Height: tabs.MinSize().Height,
 	})
 
-	tabContainer := container.NewHBox(tabs, spacer)
+	tabContainer := container.NewVBox(tabs)
 
 	myWindow.SetContent(tabContainer)
 
 	myWindow.ShowAndRun()
-
-	// fmt.Println("Store or Get?")
-	// godotenv.Load()
-	// var decision string
-	// _, err := fmt.Scanln(&decision)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// if strings.ToLower(decision) == "store" {
-	// 	storeCli()
-	// 	return
-	// }
-	// if strings.ToLower(decision) == "get" {
-	// 	getCli()
-	// 	return
-	// }
-
-	// fmt.Println("unknown decision")
 }

@@ -13,7 +13,7 @@ type CockroachClient struct {
 	db  *sql.DB
 }
 
-type storedPassword struct {
+type StoredPassword struct {
 	WebsiteName string    `json:"websiteName"`
 	Username    string    `json:"username"`
 	Password    string    `json:"password"`
@@ -24,9 +24,7 @@ func NewCockroachClient(ctx context.Context, db *sql.DB) *CockroachClient {
 	return &CockroachClient{ctx: ctx, db: db}
 }
 
-func (cc *CockroachClient) Store(sp storedPassword) error {
-	cc.db.ExecContext(cc.ctx, "CREATE TABLE IF NOT EXISTS password (websiteName varchar(255), username varchar(255), password varchar(255))")
-
+func (cc *CockroachClient) Store(sp StoredPassword) error {
 	query := fmt.Sprintf("INSERT INTO password (websiteName, username, password) VALUES (%v, %v, %v);", &sp.WebsiteName, &sp.Username, &sp.Password)
 
 	_, err := cc.db.ExecContext(cc.ctx, query)
@@ -47,19 +45,19 @@ func (cc *CockroachClient) GetPassword(websiteName string) (string, error) {
 	return password, nil
 }
 
-func (cc *CockroachClient) GetAllPasswords() ([]storedPassword, error) {
+func (cc *CockroachClient) GetAllPasswords() ([]StoredPassword, error) {
 	rows, err := cc.db.QueryContext(cc.ctx, "SELECT websiteName, username, password FROM password;")
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return []storedPassword{}, fmt.Errorf("no passwords found")
+			return []StoredPassword{}, fmt.Errorf("no passwords found")
 		}
-		return []storedPassword{}, fmt.Errorf("unknown error")
+		return []StoredPassword{}, fmt.Errorf("unknown error")
 	}
 
-	var passwords []storedPassword
+	var passwords []StoredPassword
 
 	for rows.Next() {
-		var password storedPassword
+		var password StoredPassword
 		err = rows.Scan(
 			&password.WebsiteName,
 			&password.Username,
