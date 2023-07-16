@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -25,11 +24,12 @@ func NewCockroachClient(ctx context.Context, db *sql.DB) *CockroachClient {
 }
 
 func (cc *CockroachClient) Store(sp StoredPassword) error {
-	query := fmt.Sprintf("INSERT INTO password (websiteName, username, password) VALUES (%v, %v, %v);", &sp.WebsiteName, &sp.Username, &sp.Password)
 
-	_, err := cc.db.ExecContext(cc.ctx, query)
+	query := "INSERT INTO password (websiteName, username, password) VALUES ( $1, $2, $3 )"
+
+	_, err := cc.db.ExecContext(cc.ctx, query, sp.WebsiteName, sp.Username, sp.Password)
 	if err != nil {
-		log.Fatal("failed to execute: ", err)
+		return err
 	}
 
 	return nil

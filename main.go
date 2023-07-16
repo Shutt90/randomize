@@ -131,9 +131,17 @@ func main() {
 			Created:     time.Now(),
 		}
 
-		fmt.Println(input)
+		err = cc.Store(input)
+		if err != nil {
+			//TODO: create failure popup
+			fmt.Println(err)
+		}
 
-		cc.Store(input)
+		//TODO: Add way to refresh passwords on submit
+		passwords, err = cc.GetAllPasswords()
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	storePwButton.Alignment = widget.ButtonAlign(fyne.TextAlignCenter)
