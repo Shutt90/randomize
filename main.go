@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"image/color"
 	"log"
 	"os"
 
@@ -12,6 +12,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -57,7 +58,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(passwords)
 	myApp := app.New()
 
 	myWindow := myApp.NewWindow("Randomize Password Manager")
@@ -65,10 +65,44 @@ func main() {
 
 	welcomeContainer := helpers.CreateTextContainer(welcomeMessages)
 
+	storePwButton := widget.NewButton("Store", func() {
+		log.Println("tapped")
+	})
+
+	storePwButton.Alignment = widget.ButtonAlign(fyne.TextAlignCenter)
+	pwArr := []fyne.CanvasObject{
+		container.NewGridWithColumns(
+			3,
+			canvas.NewText("Username", color.White),
+			canvas.NewText("WebsiteName", color.White),
+			canvas.NewText("Password", color.White),
+		),
+	}
+	for _, pass := range passwords {
+		passwordContainer := container.NewGridWithColumns(
+			3,
+			canvas.NewText(pass.Username, color.White),
+			canvas.NewText(pass.WebsiteName, color.White),
+			canvas.NewText(pass.Password, color.White),
+		)
+
+		pwArr = append(pwArr, passwordContainer)
+	}
+
+	pwContainer := container.NewPadded(
+		container.NewVBox(
+			container.NewVBox(
+				container.NewVBox(pwArr...),
+			),
+		),
+	)
+
 	tabs := container.NewVBox(
 		container.NewAppTabs(
 			container.NewTabItemWithIcon("Home", theme.HomeIcon(), welcomeContainer),
-			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(), widget.NewLabel("Passwords")),
+			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(),
+				container.NewVBox(pwContainer, storePwButton),
+			),
 		),
 	)
 

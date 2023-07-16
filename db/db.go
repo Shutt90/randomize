@@ -60,8 +60,13 @@ func (cc *CockroachClient) GetAllPasswords() ([]storedPassword, error) {
 
 	for rows.Next() {
 		var password storedPassword
-		err = rows.Scan(&password)
+		err = rows.Scan(
+			&password.WebsiteName,
+			&password.Username,
+			&password.Password,
+		)
 		if err != nil {
+			fmt.Println(err)
 			break
 		}
 		passwords = append(passwords, password)
