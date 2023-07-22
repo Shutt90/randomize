@@ -7,7 +7,6 @@ import (
 	"image/color"
 	"log"
 	"os"
-	"time"
 
 	cockroachDB "github.com/shutt90/password-generator/db"
 	"github.com/shutt90/password-generator/helpers.go"
@@ -128,7 +127,6 @@ func main() {
 			WebsiteName: websiteField.Text,
 			Username:    usernameField.Text,
 			Password:    passwordField.Text,
-			Created:     time.Now(),
 		}
 
 		err = cc.Store(input)
@@ -146,11 +144,26 @@ func main() {
 
 	storePwButton.Alignment = widget.ButtonAlign(fyne.TextAlignCenter)
 
+	passwordOutput := widget.NewEntry()
+	passwordOutput.Disable()
+	generatePasswordBtn := widget.NewButton("Generate Password", func() {
+		randomize := helpers.Randomize(128)
+		passwordField.Text = randomize
+		passwordField.Cursor()
+	})
+
+	generateContainer := container.NewGridWithColumns(
+		1,
+		generatePasswordBtn,
+	)
+
 	tabs := container.NewVBox(
 		container.NewAppTabs(
 			container.NewTabItemWithIcon("Home", theme.HomeIcon(), welcomeContainer),
 			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(),
-				container.NewVBox(pwContainer,
+				container.NewVBox(
+					pwContainer,
+					generateContainer,
 					container.NewVBox(
 						input,
 						storePwButton,

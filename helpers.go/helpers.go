@@ -41,11 +41,11 @@ func CreateTextContainer(textArr []string) *fyne.Container {
 }
 
 func Randomize(numLetters uint8) string {
-	rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
 	var password []string
 	var i uint8
 	for i = 0; i < numLetters; i++ {
-		rand := rand.Intn(126-33) + 33
+		rand := r.Intn(126-33) + 33
 		letter := fmt.Sprintf("%c", rand)
 		password = append(password, string(letter))
 	}
