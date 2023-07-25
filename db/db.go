@@ -8,7 +8,10 @@ import (
 	"time"
 )
 
-var ErrCouldNotStore = errors.New("unable to store password at this time")
+var (
+	ErrCouldNotStore = errors.New("Unable to store password at this time")
+	ErrBlankInput    = errors.New("One or more fields is empty")
+)
 
 type CockroachClient struct {
 	ctx context.Context
@@ -27,6 +30,9 @@ func NewCockroachClient(ctx context.Context, db *sql.DB) *CockroachClient {
 }
 
 func (cc *CockroachClient) Store(sp StoredPassword) error {
+	if sp.Password == "" || sp.Username == "" || sp.WebsiteName == "" {
+		return ErrBlankInput
+	}
 
 	query := "INSERT INTO password (websiteName, username, password) VALUES ( $1, $2, $3 )"
 
@@ -36,6 +42,7 @@ func (cc *CockroachClient) Store(sp StoredPassword) error {
 	}
 
 	return nil
+
 }
 
 func (cc *CockroachClient) GetPassword(websiteName string) (string, error) {

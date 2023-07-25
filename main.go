@@ -130,7 +130,15 @@ func main() {
 
 		err = cc.Store(input)
 		if err != nil {
-			widget.ShowPopUpAtPosition(container.NewHBox(canvas.NewText(err.Error(), color.RGBA{255, 0, 0, 1})), myWindow.Canvas(), fyne.Position{X: myWindow.Canvas().Size().Width / 2., Y: myWindow.Canvas().Size().Height / 2.})
+			newPaddedH := container.NewHBox(container.NewPadded(canvas.NewText(err.Error(), color.White)))
+			widget.ShowPopUpAtPosition(
+				newPaddedH,
+				myWindow.Canvas(),
+				fyne.Position{
+					X: myWindow.Canvas().Size().Width/2. - newPaddedH.Size().Width/2,
+					Y: myWindow.Canvas().Size().Height/2. - newPaddedH.Size().Height/2,
+				},
+			)
 		}
 
 		//TODO: Add way to refresh passwords on submit
@@ -145,7 +153,6 @@ func main() {
 	generatePasswordBtn := widget.NewButton("Generate Password", func() {
 		randomize := helpers.Randomize(128)
 		passwordField.Text = randomize
-		widget.ShowPopUpAtPosition(container.NewHBox(canvas.NewText("hi", color.White)), myWindow.Canvas(), fyne.Position{X: myWindow.Canvas().Size().Width / 2., Y: myWindow.Canvas().Size().Height / 2.})
 	})
 
 	generateContainer := container.NewGridWithColumns(
