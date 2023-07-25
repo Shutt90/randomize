@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"image/color"
 	"log"
 	"os"
@@ -71,7 +70,7 @@ func main() {
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(480, 640))
 
-	welcomeContainer := helpers.CreateTextContainer(welcomeMessages)
+	infoContainer := helpers.CreateTextContainer(welcomeMessages)
 
 	usernameHeader := canvas.NewText("Username", color.White)
 	passwordHeader := canvas.NewText("Password", color.White)
@@ -131,8 +130,7 @@ func main() {
 
 		err = cc.Store(input)
 		if err != nil {
-			//TODO: create failure popup
-			fmt.Println(err)
+			widget.ShowPopUpAtPosition(container.NewHBox(canvas.NewText(err.Error(), color.RGBA{255, 0, 0, 1})), myWindow.Canvas(), fyne.Position{X: myWindow.Canvas().Size().Width / 2., Y: myWindow.Canvas().Size().Height / 2.})
 		}
 
 		//TODO: Add way to refresh passwords on submit
@@ -142,14 +140,12 @@ func main() {
 		}
 	})
 
-	storePwButton.Alignment = widget.ButtonAlign(fyne.TextAlignCenter)
-
 	passwordOutput := widget.NewEntry()
 	passwordOutput.Disable()
 	generatePasswordBtn := widget.NewButton("Generate Password", func() {
 		randomize := helpers.Randomize(128)
 		passwordField.Text = randomize
-		passwordField.Cursor()
+		widget.ShowPopUpAtPosition(container.NewHBox(canvas.NewText("hi", color.White)), myWindow.Canvas(), fyne.Position{X: myWindow.Canvas().Size().Width / 2., Y: myWindow.Canvas().Size().Height / 2.})
 	})
 
 	generateContainer := container.NewGridWithColumns(
@@ -159,7 +155,6 @@ func main() {
 
 	tabs := container.NewVBox(
 		container.NewAppTabs(
-			container.NewTabItemWithIcon("Home", theme.HomeIcon(), welcomeContainer),
 			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(),
 				container.NewVBox(
 					pwContainer,
@@ -170,6 +165,7 @@ func main() {
 					),
 				),
 			),
+			container.NewTabItemWithIcon("Info", theme.InfoIcon(), infoContainer),
 		),
 	)
 

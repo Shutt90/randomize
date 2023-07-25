@@ -3,9 +3,12 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
+
+var ErrCouldNotStore = errors.New("unable to store password at this time")
 
 type CockroachClient struct {
 	ctx context.Context
@@ -29,7 +32,7 @@ func (cc *CockroachClient) Store(sp StoredPassword) error {
 
 	_, err := cc.db.ExecContext(cc.ctx, query, sp.WebsiteName, sp.Username, sp.Password)
 	if err != nil {
-		return err
+		return ErrCouldNotStore
 	}
 
 	return nil
