@@ -15,6 +15,12 @@ import (
 	"github.com/shutt90/password-generator/helpers.go"
 )
 
+type InputColumn struct {
+	Name    string
+	Entry   widget.Entry
+	Textbox canvas.Text
+}
+
 var welcomeMessages = []string{
 	"Welcome to Randomize Password Manager",
 	"",
@@ -25,11 +31,11 @@ var welcomeMessages = []string{
 	"I hope you enjoy using the product",
 }
 
-var fields = []string{
-	"Website",
-	"Username",
-	"Password",
-}
+const (
+	Website  = "Website Name"
+	Username = "Username"
+	Password = "Password"
+)
 
 func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredPassword) {
 	myApp := app.New()
@@ -39,34 +45,45 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	infoContainer := createTextContainer(welcomeMessages)
 
-	var fieldArr []fyne.CanvasObject
-	inputArr := make([]*widget.Entry, len(fieldArr))
+	fields := []InputColumn{
+		{
+			Name:  Website,
+			Entry: *widget.NewEntry(),
+		},
+		{
+			Name:  Username,
+			Entry: *widget.NewEntry(),
+		},
+		{
+			Name:  Password,
+			Entry: *widget.NewEntry(),
+		},
+	}
 
 	for _, field := range fields {
-		headerField := canvas.NewText(field, color.White)
-		headerField.Alignment = fyne.TextAlignCenter
-		headerField.TextStyle.Bold = true
-		fieldArr = append(fieldArr, headerField)
-		inputField := widget.NewEntry()
-		inputField.PlaceHolder = field
-		inputArr = append(inputArr, inputField)
+		field.Textbox = *canvas.NewText(field.Name, color.White)
+		field.Textbox.Alignment = fyne.TextAlignCenter
+		field.Textbox.TextStyle.Bold = true
+		field.Entry.PlaceHolder = field.Name
 	}
 
 	pwArr := []fyne.CanvasObject{
 		container.NewGridWithColumns(
-			len(fieldArr),
-			fieldArr...,
+			len(fields),
+			fyne.CanvasObject(&fields[0].Textbox),
+			fyne.CanvasObject(&fields[1].Textbox),
+			fyne.CanvasObject(&fields[2].Textbox),
 		),
 	}
 	input := container.NewGridWithColumns(
-		len(inputArr),
-		fyne.CanvasObject(inputArr[0]),
-		fyne.CanvasObject(inputArr[1]),
-		fyne.CanvasObject(inputArr[2]),
+		len(fields),
+		fyne.CanvasObject(&fields[0].Entry),
+		fyne.CanvasObject(&fields[1].Entry),
+		fyne.CanvasObject(&fields[2].Entry),
 	)
 	for _, pass := range passwords {
 		passwordContainer := container.NewGridWithColumns(
-			len(fieldArr),
+			len(fields),
 			canvas.NewText(pass.WebsiteName, color.White),
 			canvas.NewText(pass.Username, color.White),
 			canvas.NewText(pass.Password, color.White),
@@ -85,9 +102,9 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	storePwButton := widget.NewButton("Store", func() {
 		input := cockroachDB.StoredPassword{
-			WebsiteName: inputArr[0].Text,
-			Username:    inputArr[1].Text,
-			Password:    inputArr[2].Text,
+			WebsiteName: fields[0].Entry.Text,
+			Username:    fields[1].Entry.Text,
+			Password:    fields[2].Entry.Text,
 		}
 
 		err := db.Store(input)
@@ -114,8 +131,8 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	passwordOutput.Disable()
 	generatePasswordBtn := widget.NewButton("Generate Password", func() {
 		randomize := helpers.Randomize(128)
-		inputArr[2].Text = randomize
-		inputArr[2].Refresh()
+		fields[2].Entry.Text = randomize
+		fields[2].Entry.Refresh()
 	})
 
 	generateContainer := container.NewGridWithColumns(
