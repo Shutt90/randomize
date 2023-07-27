@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"golang.design/x/clipboard"
 
 	cockroachDB "github.com/shutt90/password-generator/db"
 	"github.com/shutt90/password-generator/helpers.go"
@@ -77,6 +78,7 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 		len(fields),
 		getInputs(fields)...,
 	)
+
 	for _, pass := range passwords {
 		passwordContainer := container.NewGridWithColumns(
 			len(fields),
@@ -125,14 +127,18 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	passwordOutput := widget.NewEntry()
 	passwordOutput.Disable()
 	generatePasswordBtn := widget.NewButton("Generate Password", func() {
-		randomize := helpers.Randomize(128)
-		fields[2].Entry.Text = randomize
+		fields[2].Entry.Text = helpers.Randomize(128)
 		fields[2].Entry.Refresh()
 	})
 
+	copyBtn := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+		clipboard.Write(clipboard.FmtText, []byte(fields[2].Entry.Text))
+	})
+
 	generateContainer := container.NewGridWithColumns(
-		1,
+		2,
 		generatePasswordBtn,
+		copyBtn,
 	)
 
 	tabs := container.NewVBox(
@@ -150,12 +156,6 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 			container.NewTabItemWithIcon("Info", theme.InfoIcon(), infoContainer),
 		),
 	)
-
-	spacer := widget.NewSeparator()
-	spacer.BaseWidget.Resize(fyne.Size{
-		Width:  tabs.MinSize().Width,
-		Height: tabs.MinSize().Height,
-	})
 
 	tabContainer := container.NewVBox(tabs)
 
