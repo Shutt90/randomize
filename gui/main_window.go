@@ -70,16 +70,12 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	pwArr := []fyne.CanvasObject{
 		container.NewGridWithColumns(
 			len(fields),
-			fyne.CanvasObject(&fields[0].Textbox),
-			fyne.CanvasObject(&fields[1].Textbox),
-			fyne.CanvasObject(&fields[2].Textbox),
+			getTextBoxes(fields)...,
 		),
 	}
 	input := container.NewGridWithColumns(
 		len(fields),
-		fyne.CanvasObject(&fields[0].Entry),
-		fyne.CanvasObject(&fields[1].Entry),
-		fyne.CanvasObject(&fields[2].Entry),
+		getInputs(fields)...,
 	)
 	for _, pass := range passwords {
 		passwordContainer := container.NewGridWithColumns(
@@ -101,10 +97,11 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	)
 
 	storePwButton := widget.NewButton("Store", func() {
+		mappedByNames := mapNamesGetEntries(fields)
 		input := cockroachDB.StoredPassword{
-			WebsiteName: fields[0].Entry.Text,
-			Username:    fields[1].Entry.Text,
-			Password:    fields[2].Entry.Text,
+			WebsiteName: mappedByNames["website"].Text,
+			Username:    mappedByNames["username"].Text,
+			Password:    mappedByNames["password"].Text,
 		}
 
 		err := db.Store(input)
@@ -193,4 +190,38 @@ func createTextContainer(textArr []string) *fyne.Container {
 	)
 
 	return textContainer
+}
+
+func getTextBoxes(cols []InputColumn) []fyne.CanvasObject {
+	var textboxes []fyne.CanvasObject
+	for _, col := range cols {
+		textboxes = append(textboxes, &col.Textbox)
+	}
+
+	return textboxes
+}
+
+func getInputs(cols []InputColumn) []fyne.CanvasObject {
+	var textboxes []fyne.CanvasObject
+	for _, col := range cols {
+		textboxes = append(textboxes, &col.Entry)
+	}
+
+	return textboxes
+}
+
+func mapNamesGetEntries(cols []InputColumn) map[string]widget.Entry {
+	names := make(map[string]widget.Entry)
+	for _, col := range cols {
+		switch col.Name {
+		case Website:
+			names["website"] = col.Entry
+		case Username:
+			names["username"] = col.Entry
+		case Password:
+			names["password"] = col.Entry
+		}
+	}
+
+	return names
 }
