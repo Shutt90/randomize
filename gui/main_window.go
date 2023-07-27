@@ -17,7 +17,7 @@ import (
 
 type InputColumn struct {
 	Name    string
-	Entry   widget.Entry
+	Entry   *widget.Entry
 	Textbox canvas.Text
 }
 
@@ -48,15 +48,15 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	fields := []InputColumn{
 		{
 			Name:  Website,
-			Entry: *widget.NewEntry(),
+			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  Username,
-			Entry: *widget.NewEntry(),
+			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  Password,
-			Entry: *widget.NewEntry(),
+			Entry: widget.NewEntry(),
 		},
 	}
 
@@ -90,18 +90,16 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	pwContainer := container.NewPadded(
 		container.NewVBox(
-			container.NewVBox(
-				container.NewVBox(pwArr...),
-			),
+			container.NewVBox(pwArr...),
 		),
 	)
 
 	storePwButton := widget.NewButton("Store", func() {
-		mappedByNames := mapNamesGetEntries(fields)
+		mappedInputsByNames := mapNamesGetInputs(fields)
 		input := cockroachDB.StoredPassword{
-			WebsiteName: mappedByNames["website"].Text,
-			Username:    mappedByNames["username"].Text,
-			Password:    mappedByNames["password"].Text,
+			WebsiteName: mappedInputsByNames["website"].Text,
+			Username:    mappedInputsByNames["username"].Text,
+			Password:    mappedInputsByNames["password"].Text,
 		}
 
 		err := db.Store(input)
@@ -204,22 +202,22 @@ func getTextBoxes(cols []InputColumn) []fyne.CanvasObject {
 func getInputs(cols []InputColumn) []fyne.CanvasObject {
 	var textboxes []fyne.CanvasObject
 	for _, col := range cols {
-		textboxes = append(textboxes, &col.Entry)
+		textboxes = append(textboxes, col.Entry)
 	}
 
 	return textboxes
 }
 
-func mapNamesGetEntries(cols []InputColumn) map[string]widget.Entry {
+func mapNamesGetInputs(cols []InputColumn) map[string]widget.Entry {
 	names := make(map[string]widget.Entry)
 	for _, col := range cols {
 		switch col.Name {
 		case Website:
-			names["website"] = col.Entry
+			names["website"] = *col.Entry
 		case Username:
-			names["username"] = col.Entry
+			names["username"] = *col.Entry
 		case Password:
-			names["password"] = col.Entry
+			names["password"] = *col.Entry
 		}
 	}
 
