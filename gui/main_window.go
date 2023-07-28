@@ -16,7 +16,9 @@ import (
 	"github.com/shutt90/password-generator/helpers.go"
 )
 
-type InputColumn struct {
+type fields []field
+
+type field struct {
 	Name    string
 	Entry   *widget.Entry
 	Textbox canvas.Text
@@ -46,7 +48,7 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	infoContainer := createTextContainer(welcomeMessages)
 
-	fields := []InputColumn{
+	fields := fields{
 		{
 			Name:  Website,
 			Entry: widget.NewEntry(),
@@ -71,12 +73,12 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	pwArr := []fyne.CanvasObject{
 		container.NewGridWithColumns(
 			len(fields),
-			getTextBoxes(fields)...,
+			fields.getTextBoxes()...,
 		),
 	}
 	input := container.NewGridWithColumns(
 		len(fields),
-		getInputs(fields)...,
+		fields.getInputs()...,
 	)
 
 	for _, pass := range passwords {
@@ -97,7 +99,7 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	)
 
 	storePwButton := widget.NewButton("Store", func() {
-		mappedInputsByNames := mapNamesGetInputs(fields)
+		mappedInputsByNames := fields.mapNamesGetInputs()
 		input := cockroachDB.StoredPassword{
 			WebsiteName: mappedInputsByNames["website"].Text,
 			Username:    mappedInputsByNames["username"].Text,
@@ -190,34 +192,34 @@ func createTextContainer(textArr []string) *fyne.Container {
 	return textContainer
 }
 
-func getTextBoxes(cols []InputColumn) []fyne.CanvasObject {
+func (f fields) getTextBoxes() []fyne.CanvasObject {
 	var textboxes []fyne.CanvasObject
-	for _, col := range cols {
-		textboxes = append(textboxes, &col.Textbox)
+	for _, field := range f {
+		textboxes = append(textboxes, &field.Textbox)
 	}
 
 	return textboxes
 }
 
-func getInputs(cols []InputColumn) []fyne.CanvasObject {
+func (f fields) getInputs() []fyne.CanvasObject {
 	var textboxes []fyne.CanvasObject
-	for _, col := range cols {
-		textboxes = append(textboxes, col.Entry)
+	for _, field := range f {
+		textboxes = append(textboxes, field.Entry)
 	}
 
 	return textboxes
 }
 
-func mapNamesGetInputs(cols []InputColumn) map[string]widget.Entry {
+func (f fields) mapNamesGetInputs() map[string]widget.Entry {
 	names := make(map[string]widget.Entry)
-	for _, col := range cols {
-		switch col.Name {
+	for _, field := range f {
+		switch field.Name {
 		case Website:
-			names["website"] = *col.Entry
+			names["website"] = *field.Entry
 		case Username:
-			names["username"] = *col.Entry
+			names["username"] = *field.Entry
 		case Password:
-			names["password"] = *col.Entry
+			names["password"] = *field.Entry
 		}
 	}
 
