@@ -187,6 +187,7 @@ func createTextContainer(textArr []string) *fyne.Container {
 		textObj.Alignment = fyne.TextAlignCenter
 		canvObj = append(canvObj, textObj)
 	}
+	
 
 	textContainer := container.NewPadded(
 		container.NewVBox(canvObj...),
@@ -196,20 +197,30 @@ func createTextContainer(textArr []string) *fyne.Container {
 }
 
 func createLoginMenu(c fyne.Canvas) {
-	// loginInput := widget.NewEntry()
-	// passwordInput := widget.NewEntry()
-	widget.NewModalPopUp(
-		container.NewVBox(
-			widget.NewLabel("Username"),
-			widget.NewEntry(),
-			widget.NewLabel("Password"),
-			widget.NewEntry(),
-			widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
-				// make api request when server setup and hide modal
-			}),
-		),
-		c,
-	).Show()
+	loginLabel := widget.NewLabel("Username")
+	loginLabel.Alignment = fyne.TextAlignCenter
+	passwordLabel := widget.NewLabel("Password")
+	passwordLabel.Alignment = fyne.TextAlignCenter
+
+	contents := container.NewVBox(
+		loginLabel,
+		widget.NewEntry(),
+		passwordLabel,
+		widget.NewEntry(),
+		widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
+			// make api request when server setup and hide modal
+		}),
+	)
+	// Set the desired size for the loginMenu modal
+	loginMenuWidth := float32(200.)
+	loginMenuHeight := float32(200.)
+	loginMenuSize := fyne.NewSize(loginMenuWidth, loginMenuHeight)
+	contents.Resize(loginMenuSize)
+
+	loginMenu := widget.NewModalPopUp(contents, c)
+	loginMenu.Resize(loginMenuSize) // Set the size of the modal popup
+
+	loginMenu.Show()
 }
 
 func (f fields) getTextBoxes() []fyne.CanvasObject {
