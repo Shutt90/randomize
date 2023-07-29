@@ -45,16 +45,6 @@ func (cc *CockroachClient) Store(sp StoredPassword) error {
 
 }
 
-func (cc *CockroachClient) GetPassword(websiteName string) (string, error) {
-	var password string
-	err := cc.db.QueryRowContext(cc.ctx, "SELECT password FROM password WHERE websiteName = ?;", websiteName).Scan(password)
-	if err != nil {
-		return "", err
-	}
-
-	return password, nil
-}
-
 func (cc *CockroachClient) GetAllPasswords() ([]StoredPassword, error) {
 	rows, err := cc.db.QueryContext(cc.ctx, "SELECT websiteName, username, password FROM password;")
 	if err != nil {

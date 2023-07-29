@@ -46,6 +46,9 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(480, 640))
 
+	//TODO: if no auth token is provided
+	createLoginMenu(myWindow.Canvas())
+
 	infoContainer := createTextContainer(welcomeMessages)
 
 	fields := fields{
@@ -190,6 +193,23 @@ func createTextContainer(textArr []string) *fyne.Container {
 	)
 
 	return textContainer
+}
+
+func createLoginMenu(c fyne.Canvas) {
+	// loginInput := widget.NewEntry()
+	// passwordInput := widget.NewEntry()
+	widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabel("Username"),
+			widget.NewEntry(),
+			widget.NewLabel("Password"),
+			widget.NewEntry(),
+			widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
+				// make api request when server setup and hide modal
+			}),
+		),
+		c,
+	).Show()
 }
 
 func (f fields) getTextBoxes() []fyne.CanvasObject {
