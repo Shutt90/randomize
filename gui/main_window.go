@@ -1,7 +1,10 @@
 package gui
 
 import (
+	"bytes"
+	"encoding/json"
 	"image/color"
+	"net/http"
 	"net/url"
 
 	"fyne.io/fyne/v2"
@@ -187,7 +190,6 @@ func createTextContainer(textArr []string) *fyne.Container {
 		textObj.Alignment = fyne.TextAlignCenter
 		canvObj = append(canvObj, textObj)
 	}
-	
 
 	textContainer := container.NewPadded(
 		container.NewVBox(canvObj...),
@@ -197,18 +199,38 @@ func createTextContainer(textArr []string) *fyne.Container {
 }
 
 func createLoginMenu(c fyne.Canvas) {
-	loginLabel := widget.NewLabel("Username")
-	loginLabel.Alignment = fyne.TextAlignCenter
+	usernameLabel := widget.NewLabel("Username")
+	usernameLabel.Alignment = fyne.TextAlignCenter
 	passwordLabel := widget.NewLabel("Password")
 	passwordLabel.Alignment = fyne.TextAlignCenter
+	usernameEntry := widget.NewEntry()
+	passwordEntry := widget.NewEntry()
 
 	contents := container.NewVBox(
-		loginLabel,
-		widget.NewEntry(),
+		usernameLabel,
+		usernameEntry,
 		passwordLabel,
-		widget.NewEntry(),
+		passwordEntry,
 		widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
 			// make api request when server setup and hide modal
+			loginDetails := map[string]string{
+				Username: usernameEntry.Text,
+				Password: passwordEntry.Text,
+			}
+
+			loginForTransport, err := json.Marshal(&loginDetails)
+			if err != nil {
+				widget.ShowPopUpAtPosition(
+					canvas.NewText("Error while logging in", color.White),
+					c,
+					fyne.Position{
+						X: c.Size().Width/2. - c.Size().Width/2,
+						Y: c.Size().Height/2. - c.Size().Height/2,
+					},
+				)
+			}
+
+			http.Post("endpoint", "application/json", bytes.NewBuffer(loginForTransport))
 		}),
 	)
 	// Set the desired size for the loginMenu modal
