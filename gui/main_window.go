@@ -3,6 +3,7 @@ package gui
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"image/color"
 	"net/http"
 	"net/url"
@@ -24,7 +25,19 @@ type fields []field
 type field struct {
 	Name    string
 	Entry   *widget.Entry
+	Label   *widget.Label
 	Textbox canvas.Text
+}
+
+type register struct {
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	FirstName     string `json:"firstName"`
+	Surname       string `json:"surname"`
+	EmailAddress  string `json:"emailAddress"`
+	StreetAddress string `json:"streetAddress"`
+	City          string `json:"city"`
+	PostCode      string `json:"postCode"`
 }
 
 var welcomeMessages = []string{
@@ -38,9 +51,16 @@ var welcomeMessages = []string{
 }
 
 const (
-	Website  = "Website Name"
-	Username = "Username"
-	Password = "Password"
+	Website         = "Website Name"
+	Username        = "Username"
+	Password        = "Password"
+	ConfirmPassword = "Confirm Password"
+	FirstName       = "First Name"
+	Surname         = "Surname"
+	EmailAddress    = "Email Address"
+	StreetAddress   = "Street Address"
+	City            = "City"
+	PostCode        = "Post Code/Zip Code"
 )
 
 func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredPassword) {
@@ -105,14 +125,17 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	)
 
 	storePwButton := widget.NewButton("Store", func() {
-		mappedInputsByNames := fields.mapNamesGetInputs()
+		mappedInputsByNames, err := fields.mapNamesGetInputs()
+		if err != nil {
+			popupForError(myWindow.Canvas(), err.Error())
+		}
 		input := cockroachDB.StoredPassword{
 			WebsiteName: mappedInputsByNames["website"].Text,
 			Username:    mappedInputsByNames["username"].Text,
 			Password:    mappedInputsByNames["password"].Text,
 		}
 
-		err := db.Store(input)
+		err = db.Store(input)
 		if err != nil {
 			newPaddedH := container.NewHBox(container.NewPadded(canvas.NewText(err.Error(), color.White)))
 			widget.ShowPopUpAtPosition(
@@ -247,24 +270,78 @@ func createLoginMenu(c fyne.Canvas) {
 
 func createRegisterMenu(c fyne.Canvas) {
 	entries := []fyne.CanvasObject{}
-	regInputs := []string{
-		"Username",
-		"Password",
-		"First Name",
-		"Surname",
-		"Confirm Password",
-		"Email Address",
-		"Street Address",
-		"City",
-		"Postal Code/Zip Code",
+	regInputs := fields{
+		{
+			Name:  Username,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  FirstName,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  Surname,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  Password,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  ConfirmPassword,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  EmailAddress,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  StreetAddress,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  City,
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  PostCode,
+			Entry: widget.NewEntry(),
+		},
 	}
 
 	for _, input := range regInputs {
-		iterationInput := widget.NewLabel(input)
+		iterationInput := widget.NewLabel(input.Name)
 		iterationInput.Alignment = fyne.TextAlignCenter
-		entries = append(entries, iterationInput)
-		entries = append(entries, widget.NewEntry())
 	}
+
+	entries = append(entries, widget.NewButtonWithIcon("Register", theme.DocumentSaveIcon(), func() {
+		regFields, err := regInputs.mapNamesGetInputs()
+		if err != nil {
+			popupForError(c, err.Error())
+		}
+
+		if regFields["password"].Text != regFields["confirmpass"].Text {
+			popupForError(c, "passwords do not match")
+		}
+
+		registration := register{
+			Username:      regFields["username"].Text,
+			Password:      regFields["password"].Text,
+			FirstName:     regFields["firstname"].Text,
+			Surname:       regFields["surname"].Text,
+			EmailAddress:  regFields["email"].Text,
+			StreetAddress: regFields["street"].Text,
+			City:          regFields["city"].Text,
+			PostCode:      regFields["postcode"].Text,
+		}
+
+		registerForTransport, err := json.Marshal(&registration)
+		if err != nil {
+			popupForError(c, "error while registering")
+		}
+
+		http.Post("endpoint", "application/json", bytes.NewBuffer(registerForTransport))
+	}))
 
 	contents := container.NewVBox(
 		entries...,
@@ -279,7 +356,6 @@ func createRegisterMenu(c fyne.Canvas) {
 	registerMenu.Resize(registerMenuSize) // Set the size of the modal popup
 
 	registerMenu.Show()
-
 }
 
 func (f fields) getTextBoxes() []fyne.CanvasObject {
@@ -300,9 +376,12 @@ func (f fields) getInputs() []fyne.CanvasObject {
 	return textboxes
 }
 
-func (f fields) mapNamesGetInputs() map[string]widget.Entry {
+func (f fields) mapNamesGetInputs() (map[string]widget.Entry, error) {
 	names := make(map[string]widget.Entry)
 	for _, field := range f {
+		if field.Entry.Text == "" {
+			return map[string]widget.Entry{}, fmt.Errorf("all fields must be filled in")
+		}
 		switch field.Name {
 		case Website:
 			names["website"] = *field.Entry
@@ -310,8 +389,33 @@ func (f fields) mapNamesGetInputs() map[string]widget.Entry {
 			names["username"] = *field.Entry
 		case Password:
 			names["password"] = *field.Entry
+		case ConfirmPassword:
+			names["confirmpass"] = *field.Entry
+		case FirstName:
+			names["firstname"] = *field.Entry
+		case Surname:
+			names["surname"] = *field.Entry
+		case EmailAddress:
+			names["email"] = *field.Entry
+		case StreetAddress:
+			names["street"] = *field.Entry
+		case City:
+			names["city"] = *field.Entry
+		case PostCode:
+			names["postcode"] = *field.Entry
 		}
 	}
 
-	return names
+	return names, nil
+}
+
+func popupForError(c fyne.Canvas, msg string) {
+	widget.ShowPopUpAtPosition(
+		canvas.NewText(msg, color.White),
+		c,
+		fyne.Position{
+			X: c.Size().Width/2. - c.Size().Width/2,
+			Y: c.Size().Height/2. - c.Size().Height/2,
+		},
+	)
 }
