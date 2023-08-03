@@ -245,6 +245,43 @@ func createLoginMenu(c fyne.Canvas) {
 	loginMenu.Show()
 }
 
+func createRegisterMenu(c fyne.Canvas) {
+	entries := []fyne.CanvasObject{}
+	regInputs := []string{
+		"Username",
+		"Password",
+		"First Name",
+		"Surname",
+		"Confirm Password",
+		"Email Address",
+		"Street Address",
+		"City",
+		"Postal Code/Zip Code",
+	}
+
+	for _, input := range regInputs {
+		iterationInput := widget.NewLabel(input)
+		iterationInput.Alignment = fyne.TextAlignCenter
+		entries = append(entries, iterationInput)
+		entries = append(entries, widget.NewEntry())
+	}
+
+	contents := container.NewVBox(
+		entries...,
+	)
+	// Set the desired size for the loginMenu modal
+	registerMenuWidth := float32(200.)
+	registerMenuHeight := float32(200.)
+	registerMenuSize := fyne.NewSize(registerMenuWidth, registerMenuHeight)
+	contents.Resize(registerMenuSize)
+
+	registerMenu := widget.NewModalPopUp(contents, c)
+	registerMenu.Resize(registerMenuSize) // Set the size of the modal popup
+
+	registerMenu.Show()
+
+}
+
 func (f fields) getTextBoxes() []fyne.CanvasObject {
 	var textboxes []fyne.CanvasObject
 	for _, field := range f {

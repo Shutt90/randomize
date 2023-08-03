@@ -32,7 +32,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS password (websiteName varchar(255), username varchar(255), password varchar(255))")
 
 	defer conn.Close()
 
