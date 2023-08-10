@@ -20,6 +20,13 @@ import (
 	"github.com/shutt90/password-generator/helpers.go"
 )
 
+const (
+	Register PopupWindow = iota
+	Login
+)
+
+type PopupWindow int
+
 type fields []field
 
 type field struct {
@@ -69,8 +76,22 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(480, 640))
 
-	//TODO: if no auth token is provided
-	createLoginMenu(myWindow.Canvas())
+	switchToRegisterBtn := widget.NewButtonWithIcon("Register", theme.ComputerIcon(), func() {})
+	switchToLoginBtn := widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {})
+
+	loginPopup := createLoginMenu(myWindow.Canvas(), switchToRegisterBtn)
+	registerPopup := createRegisterMenu(myWindow.Canvas(), switchToLoginBtn)
+
+	switchToRegisterBtn.OnTapped = func() {
+		loginPopup.Hide()
+		registerPopup.Show()
+	}
+	switchToLoginBtn.OnTapped = func() {
+		registerPopup.Hide()
+		loginPopup.Show()
+	}
+
+	loginPopup.Show()
 
 	infoContainer := createTextContainer(welcomeMessages)
 
@@ -221,7 +242,7 @@ func createTextContainer(textArr []string) *fyne.Container {
 	return textContainer
 }
 
-func createLoginMenu(c fyne.Canvas) {
+func createLoginMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 	usernameLabel := widget.NewLabel("Username")
 	usernameLabel.Alignment = fyne.TextAlignCenter
 	passwordLabel := widget.NewLabel("Password")
@@ -255,7 +276,9 @@ func createLoginMenu(c fyne.Canvas) {
 
 			http.Post("endpoint", "application/json", bytes.NewBuffer(loginForTransport))
 		}),
+		b,
 	)
+
 	// Set the desired size for the loginMenu modal
 	loginMenuWidth := float32(200.)
 	loginMenuHeight := float32(200.)
@@ -265,10 +288,10 @@ func createLoginMenu(c fyne.Canvas) {
 	loginMenu := widget.NewModalPopUp(contents, c)
 	loginMenu.Resize(loginMenuSize) // Set the size of the modal popup
 
-	loginMenu.Show()
+	return loginMenu
 }
 
-func createRegisterMenu(c fyne.Canvas) {
+func createRegisterMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 	entries := []fyne.CanvasObject{}
 	regInputs := fields{
 		{
@@ -343,6 +366,8 @@ func createRegisterMenu(c fyne.Canvas) {
 		http.Post("endpoint", "application/json", bytes.NewBuffer(registerForTransport))
 	}))
 
+	entries = append(entries, b)
+
 	contents := container.NewVBox(
 		entries...,
 	)
@@ -355,7 +380,7 @@ func createRegisterMenu(c fyne.Canvas) {
 	registerMenu := widget.NewModalPopUp(contents, c)
 	registerMenu.Resize(registerMenuSize) // Set the size of the modal popup
 
-	registerMenu.Show()
+	return registerMenu
 }
 
 func (f fields) getTextBoxes() []fyne.CanvasObject {
