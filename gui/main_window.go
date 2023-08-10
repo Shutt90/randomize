@@ -68,13 +68,15 @@ const (
 	StreetAddress   = "Street Address"
 	City            = "City"
 	PostCode        = "Post Code/Zip Code"
+	WindowWidth     = 500
+	WindowHeight    = 720
 )
 
 func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredPassword) {
 	myApp := app.New()
 
 	myWindow := myApp.NewWindow("Randomize Password Manager")
-	myWindow.Resize(fyne.NewSize(480, 640))
+	myWindow.Resize(fyne.NewSize(WindowWidth, WindowHeight))
 
 	switchToRegisterBtn := widget.NewButtonWithIcon("Register", theme.ComputerIcon(), func() {})
 	switchToLoginBtn := widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {})
@@ -243,23 +245,29 @@ func createTextContainer(textArr []string) *fyne.Container {
 }
 
 func createLoginMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
-	usernameLabel := widget.NewLabel("Username")
-	usernameLabel.Alignment = fyne.TextAlignCenter
-	passwordLabel := widget.NewLabel("Password")
-	passwordLabel.Alignment = fyne.TextAlignCenter
-	usernameEntry := widget.NewEntry()
-	passwordEntry := widget.NewEntry()
+	loginFields := fields{
+		{
+			Name:  Username,
+			Label: widget.NewLabelWithStyle(Username, fyne.TextAlignCenter, fyne.TextStyle{}),
+			Entry: widget.NewEntry(),
+		},
+		{
+			Name:  Password,
+			Label: widget.NewLabelWithStyle(Password, fyne.TextAlignCenter, fyne.TextStyle{}),
+			Entry: widget.NewEntry(),
+		},
+	}
 
 	contents := container.NewVBox(
-		usernameLabel,
-		usernameEntry,
-		passwordLabel,
-		passwordEntry,
+		loginFields[0].Label,
+		loginFields[0].Entry,
+		loginFields[1].Label,
+		loginFields[1].Entry,
 		widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
 			// make api request when server setup and hide modal
 			loginDetails := map[string]string{
-				Username: usernameEntry.Text,
-				Password: passwordEntry.Text,
+				Username: loginFields[0].Entry.Text,
+				Password: loginFields[1].Entry.Text,
 			}
 
 			loginForTransport, err := json.Marshal(&loginDetails)
@@ -296,45 +304,54 @@ func createRegisterMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 	regInputs := fields{
 		{
 			Name:  Username,
+			Label: widget.NewLabelWithStyle(Username, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  FirstName,
+			Label: widget.NewLabelWithStyle(FirstName, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  Surname,
+			Label: widget.NewLabelWithStyle(Surname, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  Password,
+			Label: widget.NewLabelWithStyle(Password, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  ConfirmPassword,
+			Label: widget.NewLabelWithStyle(ConfirmPassword, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  EmailAddress,
+			Label: widget.NewLabelWithStyle(EmailAddress, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  StreetAddress,
+			Label: widget.NewLabelWithStyle(StreetAddress, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  City,
+			Label: widget.NewLabelWithStyle(City, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 		{
 			Name:  PostCode,
+			Label: widget.NewLabelWithStyle(PostCode, fyne.TextAlignCenter, fyne.TextStyle{}),
 			Entry: widget.NewEntry(),
 		},
 	}
 
 	for _, input := range regInputs {
-		iterationInput := widget.NewLabel(input.Name)
-		iterationInput.Alignment = fyne.TextAlignCenter
+		entries = append(entries, input.Label)
+		entries = append(entries, input.Entry)
 	}
 
 	entries = append(entries, widget.NewButtonWithIcon("Register", theme.DocumentSaveIcon(), func() {
