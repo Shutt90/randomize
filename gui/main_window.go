@@ -3,7 +3,6 @@ package gui
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"image/color"
 	"net/http"
 	"net/url"
@@ -17,6 +16,7 @@ import (
 	"golang.design/x/clipboard"
 
 	cockroachDB "github.com/shutt90/password-generator/db"
+	"github.com/shutt90/password-generator/gui/components"
 	"github.com/shutt90/password-generator/helpers.go"
 )
 
@@ -27,15 +27,6 @@ const (
 
 type PopupWindow int
 
-type fields []field
-
-type field struct {
-	Name    string
-	Entry   *widget.Entry
-	Label   *widget.Label
-	Textbox canvas.Text
-}
-
 type register struct {
 	Username      string `json:"username"`
 	Password      string `json:"password"`
@@ -45,16 +36,6 @@ type register struct {
 	StreetAddress string `json:"streetAddress"`
 	City          string `json:"city"`
 	PostCode      string `json:"postCode"`
-}
-
-var welcomeMessages = []string{
-	"Welcome to Randomize Password Manager",
-	"",
-	"I am constantly looking to improve on this software so please email any suggestions to",
-	"Liam.Pugh.009@gmail.com",
-	"Any feedback is greatly appreciated",
-	"",
-	"I hope you enjoy using the product",
 }
 
 const (
@@ -71,6 +52,33 @@ const (
 	WindowWidth     = 500
 	WindowHeight    = 720
 )
+
+var regFields = []string{
+	Username,
+	Password,
+	ConfirmPassword,
+	FirstName,
+	Surname,
+	EmailAddress,
+	StreetAddress,
+	City,
+	PostCode,
+}
+
+var loginFields = []string{
+	Username,
+	Password,
+}
+
+var welcomeMessages = []string{
+	"Welcome to Randomize Password Manager",
+	"",
+	"I am constantly looking to improve on this software so please email any suggestions to",
+	"Liam.Pugh.009@gmail.com",
+	"Any feedback is greatly appreciated",
+	"",
+	"I hope you enjoy using the product",
+}
 
 func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredPassword) {
 	myApp := app.New()
@@ -97,7 +105,7 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	infoContainer := createTextContainer(welcomeMessages)
 
-	fields := fields{
+	fields := components.Fields{
 		{
 			Name:  Website,
 			Entry: widget.NewEntry(),
@@ -122,12 +130,12 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	pwArr := []fyne.CanvasObject{
 		container.NewGridWithColumns(
 			len(fields),
-			fields.getTextBoxes()...,
+			fields.GetTextBoxes()...,
 		),
 	}
 	input := container.NewGridWithColumns(
 		len(fields),
-		fields.getInputs()...,
+		fields.GetInputs()...,
 	)
 
 	for _, pass := range passwords {
@@ -148,7 +156,7 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	)
 
 	storePwButton := widget.NewButton("Store", func() {
-		mappedInputsByNames, err := fields.mapNamesGetInputs()
+		mappedInputsByNames, err := fields.MapNamesGetInputs()
 		if err != nil {
 			popupForError(myWindow.Canvas(), err.Error())
 		}
@@ -245,19 +253,9 @@ func createTextContainer(textArr []string) *fyne.Container {
 }
 
 func createLoginMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
-	loginFields := fields{
-		{
-			Name:  Username,
-			Label: widget.NewLabelWithStyle(Username, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  Password,
-			Label: widget.NewLabelWithStyle(Password, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-	}
+	loginFields := components.Fields{}
 
+	// TODO: clean this up at earliest possible convience, broken code
 	contents := container.NewVBox(
 		loginFields[0].Label,
 		loginFields[0].Entry,
@@ -301,61 +299,14 @@ func createLoginMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 
 func createRegisterMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 	entries := []fyne.CanvasObject{}
-	regInputs := fields{
-		{
-			Name:  Username,
-			Label: widget.NewLabelWithStyle(Username, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  FirstName,
-			Label: widget.NewLabelWithStyle(FirstName, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  Surname,
-			Label: widget.NewLabelWithStyle(Surname, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  Password,
-			Label: widget.NewLabelWithStyle(Password, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  ConfirmPassword,
-			Label: widget.NewLabelWithStyle(ConfirmPassword, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  EmailAddress,
-			Label: widget.NewLabelWithStyle(EmailAddress, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  StreetAddress,
-			Label: widget.NewLabelWithStyle(StreetAddress, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  City,
-			Label: widget.NewLabelWithStyle(City, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  PostCode,
-			Label: widget.NewLabelWithStyle(PostCode, fyne.TextAlignCenter, fyne.TextStyle{}),
-			Entry: widget.NewEntry(),
-		},
-	}
+	regInputArr := components.Fields{}
 
-	for _, input := range regInputs {
-		entries = append(entries, input.Label)
-		entries = append(entries, input.Entry)
+	for _, regField := range regFields {
+		regInputArr = append(regInputArr, components.NewField(regField))
 	}
 
 	entries = append(entries, widget.NewButtonWithIcon("Register", theme.DocumentSaveIcon(), func() {
-		regFields, err := regInputs.mapNamesGetInputs()
+		regFields, err := regInputArr.MapNamesGetInputs()
 		if err != nil {
 			popupForError(c, err.Error())
 		}
@@ -398,57 +349,6 @@ func createRegisterMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 	registerMenu.Resize(registerMenuSize) // Set the size of the modal popup
 
 	return registerMenu
-}
-
-func (f fields) getTextBoxes() []fyne.CanvasObject {
-	var textboxes []fyne.CanvasObject
-	for _, field := range f {
-		textboxes = append(textboxes, &field.Textbox)
-	}
-
-	return textboxes
-}
-
-func (f fields) getInputs() []fyne.CanvasObject {
-	var textboxes []fyne.CanvasObject
-	for _, field := range f {
-		textboxes = append(textboxes, field.Entry)
-	}
-
-	return textboxes
-}
-
-func (f fields) mapNamesGetInputs() (map[string]widget.Entry, error) {
-	names := make(map[string]widget.Entry)
-	for _, field := range f {
-		if field.Entry.Text == "" {
-			return map[string]widget.Entry{}, fmt.Errorf("all fields must be filled in")
-		}
-		switch field.Name {
-		case Website:
-			names["website"] = *field.Entry
-		case Username:
-			names["username"] = *field.Entry
-		case Password:
-			names["password"] = *field.Entry
-		case ConfirmPassword:
-			names["confirmpass"] = *field.Entry
-		case FirstName:
-			names["firstname"] = *field.Entry
-		case Surname:
-			names["surname"] = *field.Entry
-		case EmailAddress:
-			names["email"] = *field.Entry
-		case StreetAddress:
-			names["street"] = *field.Entry
-		case City:
-			names["city"] = *field.Entry
-		case PostCode:
-			names["postcode"] = *field.Entry
-		}
-	}
-
-	return names, nil
 }
 
 func popupForError(c fyne.Canvas, msg string) {
