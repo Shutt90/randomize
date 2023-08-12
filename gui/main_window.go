@@ -252,20 +252,28 @@ func createTextContainer(textArr []string) *fyne.Container {
 	return textContainer
 }
 
-func createLoginMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
-	loginFields := components.Fields{}
+func createLoginMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
+	loginInputArr := components.Fields{}
+	items := []fyne.CanvasObject{}
 
-	// TODO: clean this up at earliest possible convience, broken code
-	contents := container.NewVBox(
-		loginFields[0].Label,
-		loginFields[0].Entry,
-		loginFields[1].Label,
-		loginFields[1].Entry,
+	for _, field := range loginFields {
+		loginInputArr = append(loginInputArr, components.NewField(field))
+	}
+
+	entries, err := loginInputArr.MapNamesGetInputs()
+	if err != nil {
+		popupForError(c, err.Error())
+	}
+
+	items = append(items, loginInputArr.GetInputsWithLabels()...)
+
+	items = append(
+		items,
 		widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
 			// make api request when server setup and hide modal
 			loginDetails := map[string]string{
-				Username: loginFields[0].Entry.Text,
-				Password: loginFields[1].Entry.Text,
+				Username: entries["username"].Text,
+				Password: entries["password"].Text,
 			}
 
 			loginForTransport, err := json.Marshal(&loginDetails)
@@ -282,8 +290,10 @@ func createLoginMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 
 			http.Post("endpoint", "application/json", bytes.NewBuffer(loginForTransport))
 		}),
-		b,
-	)
+		btn)
+
+	// TODO: clean this up at earliest possible convience, broken code
+	contents := container.NewVBox(items...)
 
 	// Set the desired size for the loginMenu modal
 	loginMenuWidth := float32(200.)
@@ -297,7 +307,7 @@ func createLoginMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 	return loginMenu
 }
 
-func createRegisterMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
+func createRegisterMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
 	entries := []fyne.CanvasObject{}
 	regInputArr := components.Fields{}
 
@@ -334,7 +344,7 @@ func createRegisterMenu(c fyne.Canvas, b *widget.Button) *widget.PopUp {
 		http.Post("endpoint", "application/json", bytes.NewBuffer(registerForTransport))
 	}))
 
-	entries = append(entries, b)
+	entries = append(entries, btn)
 
 	contents := container.NewVBox(
 		entries...,
