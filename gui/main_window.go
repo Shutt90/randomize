@@ -3,6 +3,7 @@ package gui
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"image/color"
 	"net/http"
 	"net/url"
@@ -23,7 +24,12 @@ import (
 const (
 	Register PopupWindow = iota
 	Login
+
+	WindowWidth  = 500
+	WindowHeight = 720
 )
+
+type Canvas fyne.Canvas
 
 type PopupWindow int
 
@@ -38,36 +44,21 @@ type register struct {
 	PostCode      string `json:"postCode"`
 }
 
-const (
-	Website         = "Website Name"
-	Username        = "Username"
-	Password        = "Password"
-	ConfirmPassword = "Confirm Password"
-	FirstName       = "First Name"
-	Surname         = "Surname"
-	EmailAddress    = "Email Address"
-	StreetAddress   = "Street Address"
-	City            = "City"
-	PostCode        = "Post Code/Zip Code"
-	WindowWidth     = 500
-	WindowHeight    = 720
-)
-
 var regFields = []string{
-	Username,
-	Password,
-	ConfirmPassword,
-	FirstName,
-	Surname,
-	EmailAddress,
-	StreetAddress,
-	City,
-	PostCode,
+	components.Username,
+	components.Password,
+	components.ConfirmPassword,
+	components.FirstName,
+	components.Surname,
+	components.EmailAddress,
+	components.StreetAddress,
+	components.City,
+	components.PostCode,
 }
 
 var loginFields = []string{
-	Username,
-	Password,
+	components.Username,
+	components.Password,
 }
 
 var welcomeMessages = []string{
@@ -86,11 +77,13 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(WindowWidth, WindowHeight))
 
+	mainCanvas := myWindow.Canvas()
+
 	switchToRegisterBtn := widget.NewButtonWithIcon("Register", theme.ComputerIcon(), func() {})
 	switchToLoginBtn := widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {})
 
-	loginPopup := createLoginMenu(myWindow.Canvas(), switchToRegisterBtn)
-	registerPopup := createRegisterMenu(myWindow.Canvas(), switchToLoginBtn)
+	loginPopup := createLoginMenu(mainCanvas, switchToRegisterBtn)
+	registerPopup := createRegisterMenu(mainCanvas, switchToLoginBtn)
 
 	switchToRegisterBtn.OnTapped = func() {
 		loginPopup.Hide()
@@ -105,42 +98,26 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	infoContainer := createTextContainer(welcomeMessages)
 
-	fields := components.Fields{
-		{
-			Name:  Website,
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  Username,
-			Entry: widget.NewEntry(),
-		},
-		{
-			Name:  Password,
-			Entry: widget.NewEntry(),
-		},
+	newPasswordInputs := components.Fields{}
+	for _, inputField := range []string{components.Website, components.Username, components.Password} {
+		newField := components.NewField(inputField)
+		newField.Textbox.TextStyle.Bold = true
+		newPasswordInputs = append(newPasswordInputs, newField)
 	}
-
-	for _, field := range fields {
-		field.Textbox = *canvas.NewText(field.Name, color.White)
-		field.Textbox.Alignment = fyne.TextAlignCenter
-		field.Textbox.TextStyle.Bold = true
-		field.Entry.PlaceHolder = field.Name
-	}
-
 	pwArr := []fyne.CanvasObject{
 		container.NewGridWithColumns(
-			len(fields),
-			fields.GetTextBoxes()...,
+			len(newPasswordInputs),
+			newPasswordInputs.GetTextBoxes()...,
 		),
 	}
 	input := container.NewGridWithColumns(
-		len(fields),
-		fields.GetInputs()...,
+		len(newPasswordInputs),
+		newPasswordInputs.GetInputs()...,
 	)
 
 	for _, pass := range passwords {
 		passwordContainer := container.NewGridWithColumns(
-			len(fields),
+			len(newPasswordInputs),
 			canvas.NewText(pass.WebsiteName, color.White),
 			canvas.NewText(pass.Username, color.White),
 			canvas.NewText(pass.Password, color.White),
@@ -155,11 +132,13 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 		),
 	)
 
+	mappedInputsByNames, err := newPasswordInputs.MapNamesGetInputs()
+	if err != nil {
+		popupForError(myWindow.Canvas(), err.Error())
+	}
+
 	storePwButton := widget.NewButton("Store", func() {
-		mappedInputsByNames, err := fields.MapNamesGetInputs()
-		if err != nil {
-			popupForError(myWindow.Canvas(), err.Error())
-		}
+
 		input := cockroachDB.StoredPassword{
 			WebsiteName: mappedInputsByNames["website"].Text,
 			Username:    mappedInputsByNames["username"].Text,
@@ -173,8 +152,8 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 				newPaddedH,
 				myWindow.Canvas(),
 				fyne.Position{
-					X: myWindow.Canvas().Size().Width/2. - newPaddedH.Size().Width/2,
-					Y: myWindow.Canvas().Size().Height/2. - newPaddedH.Size().Height/2,
+					X: mainCanvas.Size().Width/2. - newPaddedH.Size().Width/2,
+					Y: mainCanvas.Size().Height/2. - newPaddedH.Size().Height/2,
 				},
 			)
 		}
@@ -189,12 +168,14 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	passwordOutput := widget.NewEntry()
 	passwordOutput.Disable()
 	generatePasswordBtn := widget.NewButton("Generate Password", func() {
-		fields[2].Entry.Text = helpers.Randomize(128)
-		fields[2].Entry.Refresh()
+		pwInput := mappedInputsByNames["password"]
+
+		pwInput.Text = helpers.Randomize(128)
+		pwInput.Refresh()
 	})
 
 	copyBtn := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
-		clipboard.Write(clipboard.FmtText, []byte(fields[2].Entry.Text))
+		clipboard.Write(clipboard.FmtText, []byte(mappedInputsByNames["password"].Text))
 	})
 
 	generateContainer := container.NewGridWithColumns(
@@ -252,7 +233,7 @@ func createTextContainer(textArr []string) *fyne.Container {
 	return textContainer
 }
 
-func createLoginMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
+func createLoginMenu(c Canvas, btn *widget.Button) *widget.PopUp {
 	loginInputArr := components.Fields{}
 	items := []fyne.CanvasObject{}
 
@@ -272,8 +253,8 @@ func createLoginMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
 		widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
 			// make api request when server setup and hide modal
 			loginDetails := map[string]string{
-				Username: entries["username"].Text,
-				Password: entries["password"].Text,
+				components.Username: entries["username"].Text,
+				components.Password: entries["password"].Text,
 			}
 
 			loginForTransport, err := json.Marshal(&loginDetails)
@@ -290,9 +271,9 @@ func createLoginMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
 
 			http.Post("endpoint", "application/json", bytes.NewBuffer(loginForTransport))
 		}),
-		btn)
+		btn,
+	)
 
-	// TODO: clean this up at earliest possible convience, broken code
 	contents := container.NewVBox(items...)
 
 	// Set the desired size for the loginMenu modal
@@ -307,16 +288,19 @@ func createLoginMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
 	return loginMenu
 }
 
-func createRegisterMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
+func createRegisterMenu(c Canvas, btn *widget.Button) *widget.PopUp {
 	entries := []fyne.CanvasObject{}
-	regInputArr := components.Fields{}
+	registerInputField := components.Field{}
+	registerInputArr := components.Fields{}
 
 	for _, regField := range regFields {
-		regInputArr = append(regInputArr, components.NewField(regField))
+		registerInputField = components.NewField(regField)
+		entries = append(entries, registerInputField.Entry)
+		registerInputArr = append(registerInputArr, registerInputField)
 	}
 
 	entries = append(entries, widget.NewButtonWithIcon("Register", theme.DocumentSaveIcon(), func() {
-		regFields, err := regInputArr.MapNamesGetInputs()
+		regFields, err := registerInputArr.MapNamesGetInputs()
 		if err != nil {
 			popupForError(c, err.Error())
 		}
@@ -335,6 +319,8 @@ func createRegisterMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
 			City:          regFields["city"].Text,
 			PostCode:      regFields["postcode"].Text,
 		}
+
+		fmt.Println(registration)
 
 		registerForTransport, err := json.Marshal(&registration)
 		if err != nil {
@@ -361,7 +347,7 @@ func createRegisterMenu(c fyne.Canvas, btn *widget.Button) *widget.PopUp {
 	return registerMenu
 }
 
-func popupForError(c fyne.Canvas, msg string) {
+func popupForError(c Canvas, msg string) {
 	widget.ShowPopUpAtPosition(
 		canvas.NewText(msg, color.White),
 		c,
