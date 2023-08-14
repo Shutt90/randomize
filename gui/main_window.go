@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -28,6 +29,8 @@ const (
 	WindowWidth  = 500
 	WindowHeight = 720
 )
+
+var wg sync.WaitGroup
 
 type Canvas fyne.Canvas
 
@@ -184,19 +187,20 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 		copyBtn,
 	)
 
-	tabs := container.NewVBox(
-		container.NewAppTabs(
-			container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(),
-				container.NewVBox(
-					pwContainer,
-					generateContainer,
-					container.NewVBox(
-						input,
-						storePwButton,
-					),
-				),
+	infoTab := container.NewTabItemWithIcon("Info", theme.InfoIcon(), infoContainer)
+
+	tabs := container.NewAppTabs(
+		infoTab,
+	)
+
+	pwTab := container.NewTabItemWithIcon("Passwords", theme.ComputerIcon(),
+		container.NewVBox(
+			pwContainer,
+			generateContainer,
+			container.NewVBox(
+				input,
+				storePwButton,
 			),
-			container.NewTabItemWithIcon("Info", theme.InfoIcon(), infoContainer),
 		),
 	)
 
@@ -205,6 +209,20 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	myWindow.SetContent(tabContainer)
 
 	myWindow.ShowAndRun()
+
+	wg.Wait()
+
+	tabs = container.NewAppTabs(
+		infoTab,
+		pwTab,
+	)
+
+	loginPopup.Hide()
+	registerPopup.Hide()
+
+	tabContainer = container.NewVBox(tabs)
+	myWindow.SetContent(tabContainer)
+	myWindow.Canvas().Refresh(myWindow.Content())
 }
 
 func createTextContainer(textArr []string) *fyne.Container {
@@ -259,17 +277,18 @@ func createLoginMenu(c Canvas, btn *widget.Button) *widget.PopUp {
 
 			loginForTransport, err := json.Marshal(&loginDetails)
 			if err != nil {
-				widget.ShowPopUpAtPosition(
-					canvas.NewText("Error while logging in", color.White),
-					c,
-					fyne.Position{
-						X: c.Size().Width/2. - c.Size().Width/2,
-						Y: c.Size().Height/2. - c.Size().Height/2,
-					},
-				)
+				popupForError(c, "Error while logging in")
 			}
 
-			http.Post("endpoint", "application/json", bytes.NewBuffer(loginForTransport))
+			resp, err := http.Post("endpoint", "application/json", bytes.NewBuffer(loginForTransport))
+			if err != nil {
+				popupForError(c, "could not login with information provided")
+			}
+
+			// TODO: Add this in
+			if resp.StatusCode == 200 {
+				wg.Done()
+			}
 		}),
 		btn,
 	)
