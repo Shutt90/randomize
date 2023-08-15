@@ -1,7 +1,6 @@
 package components
 
 import (
-	"fmt"
 	"image/color"
 
 	"fyne.io/fyne/v2"
@@ -74,9 +73,6 @@ func (f Fields) GetInputsWithLabels() []fyne.CanvasObject {
 func (f Fields) MapNamesGetInputs() (map[string]widget.Entry, error) {
 	names := make(map[string]widget.Entry)
 	for _, field := range f {
-		if field.Entry.Text == "" {
-			return map[string]widget.Entry{}, fmt.Errorf("all fields must be filled in")
-		}
 		switch field.Name {
 		case Website:
 			names["website"] = *field.Entry

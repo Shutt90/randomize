@@ -1,11 +1,7 @@
 package gui
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"image/color"
-	"net/http"
 	"net/url"
 	"sync"
 
@@ -32,22 +28,11 @@ const (
 
 var wg sync.WaitGroup
 
-type Canvas fyne.Canvas
-
 type PopupWindow int
 
-type register struct {
-	Username      string `json:"username"`
-	Password      string `json:"password"`
-	FirstName     string `json:"firstName"`
-	Surname       string `json:"surname"`
-	EmailAddress  string `json:"emailAddress"`
-	StreetAddress string `json:"streetAddress"`
-	City          string `json:"city"`
-	PostCode      string `json:"postCode"`
-}
+type Canvas fyne.Canvas
 
-var regFields = []string{
+var regFieldNames = []string{
 	components.Username,
 	components.Password,
 	components.ConfirmPassword,
@@ -59,7 +44,7 @@ var regFields = []string{
 	components.PostCode,
 }
 
-var loginFields = []string{
+var loginFieldNames = []string{
 	components.Username,
 	components.Password,
 }
@@ -85,8 +70,25 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 	switchToRegisterBtn := widget.NewButtonWithIcon("Register", theme.ComputerIcon(), func() {})
 	switchToLoginBtn := widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {})
 
-	loginPopup := createLoginMenu(mainCanvas, switchToRegisterBtn)
-	registerPopup := createRegisterMenu(mainCanvas, switchToLoginBtn)
+	loginFields := components.Fields{}
+	registerFields := components.Fields{}
+	for _, fieldName := range loginFieldNames {
+		loginFields = append(loginFields, components.NewField(fieldName))
+	}
+	for _, fieldName := range regFieldNames {
+		registerFields = append(registerFields, components.NewField(fieldName))
+	}
+
+	loginPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, loginFields)
+	if err != nil {
+		popupForError(myWindow.Canvas(), err.Error())
+		return
+	}
+	registerPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, registerFields)
+	if err != nil {
+		popupForError(myWindow.Canvas(), err.Error())
+		return
+	}
 
 	switchToRegisterBtn.OnTapped = func() {
 		loginPopup.Hide()
@@ -249,121 +251,6 @@ func createTextContainer(textArr []string) *fyne.Container {
 	)
 
 	return textContainer
-}
-
-func createLoginMenu(c Canvas, btn *widget.Button) *widget.PopUp {
-	loginInputArr := components.Fields{}
-	items := []fyne.CanvasObject{}
-
-	for _, field := range loginFields {
-		loginInputArr = append(loginInputArr, components.NewField(field))
-	}
-
-	entries, err := loginInputArr.MapNamesGetInputs()
-	if err != nil {
-		popupForError(c, err.Error())
-	}
-
-	items = append(items, loginInputArr.GetInputsWithLabels()...)
-
-	items = append(
-		items,
-		widget.NewButtonWithIcon("Login", theme.LoginIcon(), func() {
-			// make api request when server setup and hide modal
-			loginDetails := map[string]string{
-				components.Username: entries["username"].Text,
-				components.Password: entries["password"].Text,
-			}
-
-			loginForTransport, err := json.Marshal(&loginDetails)
-			if err != nil {
-				popupForError(c, "Error while logging in")
-			}
-
-			resp, err := http.Post("endpoint", "application/json", bytes.NewBuffer(loginForTransport))
-			if err != nil {
-				popupForError(c, "could not login with information provided")
-			}
-
-			// TODO: Add this in
-			if resp.StatusCode == 200 {
-				wg.Done()
-			}
-		}),
-		btn,
-	)
-
-	contents := container.NewVBox(items...)
-
-	// Set the desired size for the loginMenu modal
-	loginMenuWidth := float32(200.)
-	loginMenuHeight := float32(200.)
-	loginMenuSize := fyne.NewSize(loginMenuWidth, loginMenuHeight)
-	contents.Resize(loginMenuSize)
-
-	loginMenu := widget.NewModalPopUp(contents, c)
-	loginMenu.Resize(loginMenuSize) // Set the size of the modal popup
-
-	return loginMenu
-}
-
-func createRegisterMenu(c Canvas, btn *widget.Button) *widget.PopUp {
-	entries := []fyne.CanvasObject{}
-	registerInputField := components.Field{}
-	registerInputArr := components.Fields{}
-
-	for _, regField := range regFields {
-		registerInputField = components.NewField(regField)
-		entries = append(entries, registerInputField.Entry)
-		registerInputArr = append(registerInputArr, registerInputField)
-	}
-
-	entries = append(entries, widget.NewButtonWithIcon("Register", theme.DocumentSaveIcon(), func() {
-		regFields, err := registerInputArr.MapNamesGetInputs()
-		if err != nil {
-			popupForError(c, err.Error())
-		}
-
-		if regFields["password"].Text != regFields["confirmpass"].Text {
-			popupForError(c, "passwords do not match")
-		}
-
-		registration := register{
-			Username:      regFields["username"].Text,
-			Password:      regFields["password"].Text,
-			FirstName:     regFields["firstname"].Text,
-			Surname:       regFields["surname"].Text,
-			EmailAddress:  regFields["email"].Text,
-			StreetAddress: regFields["street"].Text,
-			City:          regFields["city"].Text,
-			PostCode:      regFields["postcode"].Text,
-		}
-
-		fmt.Println(registration)
-
-		registerForTransport, err := json.Marshal(&registration)
-		if err != nil {
-			popupForError(c, "error while registering")
-		}
-
-		http.Post("endpoint", "application/json", bytes.NewBuffer(registerForTransport))
-	}))
-
-	entries = append(entries, btn)
-
-	contents := container.NewVBox(
-		entries...,
-	)
-	// Set the desired size for the loginMenu modal
-	registerMenuWidth := float32(200.)
-	registerMenuHeight := float32(200.)
-	registerMenuSize := fyne.NewSize(registerMenuWidth, registerMenuHeight)
-	contents.Resize(registerMenuSize)
-
-	registerMenu := widget.NewModalPopUp(contents, c)
-	registerMenu.Resize(registerMenuSize) // Set the size of the modal popup
-
-	return registerMenu
 }
 
 func popupForError(c Canvas, msg string) {
