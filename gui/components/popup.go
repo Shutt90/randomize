@@ -22,7 +22,7 @@ type register struct {
 	PostCode      string `json:"postCode"`
 }
 
-func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields) (*widget.PopUp, error) {
+func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bool, verified chan bool) (*widget.PopUp, error) {
 	items := []fyne.CanvasObject{}
 	entries, err := fields.MapNamesGetInputs()
 	if err != nil {
@@ -47,14 +47,23 @@ func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields) (*widget.PopU
 				return
 			}
 
-			resp, err := http.Post("endpoint", "application/json", dataForTransport)
-			if err != nil {
-				return
+			var res *http.Response
+
+			if toRegister {
+				res, err = http.Post("endpoint", "application/json", dataForTransport)
+				if err != nil {
+					return
+				}
+			} else {
+				res, err = http.Post("endpoint", "application/json", dataForTransport)
+				if err != nil {
+					return
+				}
 			}
 
 			// TODO: Add this in
-			if resp.StatusCode == 200 {
-				//unblock channel
+			if res.StatusCode == 200 {
+				verified <- true
 			}
 		}),
 		btn,

@@ -3,7 +3,6 @@ package gui
 import (
 	"image/color"
 	"net/url"
-	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -25,8 +24,6 @@ const (
 	WindowWidth  = 500
 	WindowHeight = 720
 )
-
-var wg sync.WaitGroup
 
 type PopupWindow int
 
@@ -61,6 +58,7 @@ var welcomeMessages = []string{
 
 func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredPassword) {
 	myApp := app.New()
+	verified := make(chan bool, 1)
 
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(WindowWidth, WindowHeight))
@@ -79,12 +77,12 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 		registerFields = append(registerFields, components.NewField(fieldName))
 	}
 
-	loginPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, loginFields)
+	loginPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, loginFields, false, verified)
 	if err != nil {
 		popupForError(myWindow.Canvas(), err.Error())
 		return
 	}
-	registerPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, registerFields)
+	registerPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, registerFields, true, verified)
 	if err != nil {
 		popupForError(myWindow.Canvas(), err.Error())
 		return
@@ -212,19 +210,19 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	myWindow.ShowAndRun()
 
-	wg.Wait()
+	if <-verified {
+		tabs = container.NewAppTabs(
+			infoTab,
+			pwTab,
+		)
 
-	tabs = container.NewAppTabs(
-		infoTab,
-		pwTab,
-	)
+		loginPopup.Hide()
+		registerPopup.Hide()
 
-	loginPopup.Hide()
-	registerPopup.Hide()
-
-	tabContainer = container.NewVBox(tabs)
-	myWindow.SetContent(tabContainer)
-	myWindow.Canvas().Refresh(myWindow.Content())
+		tabContainer = container.NewVBox(tabs)
+		myWindow.SetContent(tabContainer)
+		myWindow.Canvas().Refresh(myWindow.Content())
+	}
 }
 
 func createTextContainer(textArr []string) *fyne.Container {
