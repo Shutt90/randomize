@@ -3,7 +3,7 @@ package components
 import (
 	"bytes"
 	"encoding/gob"
-	"net/http"
+	"fmt"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"

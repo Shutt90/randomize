@@ -42,7 +42,6 @@ func (cc *CockroachClient) Store(sp StoredPassword) error {
 	}
 
 	return nil
-
 }
 
 func (cc *CockroachClient) GetAllPasswords() ([]StoredPassword, error) {
