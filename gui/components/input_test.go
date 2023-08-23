@@ -1,25 +1,22 @@
 package components
 
 import (
-	"image/color"
 	"testing"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/test"
 )
 
-func TestGetTextBoxes(t *testing.T) {
-	testField := Fields{NewField("test"), NewField("test2")}
+func TestNewField(t *testing.T) {
+	test.NewApp()
+	defer test.NewApp()
 
-	res := testField.GetTextBoxes()
-	expected := []fyne.CanvasObject{
-		canvas.NewText("test", color.White),
-		canvas.NewText("test", color.White),
+	testField1 := NewField("test1")
+
+	expected := Field{
+		Name: "test1",
 	}
 
-	for i, each := range expected {
-		if each != res[i] {
-			t.Fatalf("getTextBoxes Failed: expected: %v, got: %v", res[i], each)
-		}
+	if expected.Name != testField1.Name {
+		t.Fatalf("Entry: expected %v, got %v\n", expected.Name, testField1.Name)
 	}
 }

@@ -58,7 +58,7 @@ var welcomeMessages = []string{
 
 func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredPassword) {
 	myApp := app.New()
-	verified := make(chan bool, 1)
+	verified := make(chan bool)
 
 	myWindow := myApp.NewWindow("Randomize Password Manager")
 	myWindow.Resize(fyne.NewSize(WindowWidth, WindowHeight))
@@ -77,12 +77,12 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 		registerFields = append(registerFields, components.NewField(fieldName))
 	}
 
-	loginPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, loginFields, false, verified)
+	loginPopup, verified, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, loginFields, false)
 	if err != nil {
 		popupForError(myWindow.Canvas(), err.Error())
 		return
 	}
-	registerPopup, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, registerFields, true, verified)
+	registerPopup, verified, err := components.CreatePopup(mainCanvas, switchToRegisterBtn, registerFields, true)
 	if err != nil {
 		popupForError(myWindow.Canvas(), err.Error())
 		return
@@ -210,19 +210,21 @@ func MainWindow(db *cockroachDB.CockroachClient, passwords []cockroachDB.StoredP
 
 	myWindow.ShowAndRun()
 
-	if <-verified {
-		tabs = container.NewAppTabs(
-			infoTab,
-			pwTab,
-		)
+	go func() {
+		if <-verified {
+			tabs = container.NewAppTabs(
+				infoTab,
+				pwTab,
+			)
 
-		loginPopup.Hide()
-		registerPopup.Hide()
+			loginPopup.Hide()
+			registerPopup.Hide()
 
-		tabContainer = container.NewVBox(tabs)
-		myWindow.SetContent(tabContainer)
-		myWindow.Canvas().Refresh(myWindow.Content())
-	}
+			tabContainer = container.NewVBox(tabs)
+			myWindow.SetContent(tabContainer)
+			myWindow.Canvas().Refresh(myWindow.Content())
+		}
+	}()
 }
 
 func createTextContainer(textArr []string) *fyne.Container {

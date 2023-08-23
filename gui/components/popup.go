@@ -16,17 +16,18 @@ type register struct {
 	Password      string `json:"password"`
 	FirstName     string `json:"firstName"`
 	Surname       string `json:"surname"`
-	EmailAddress  string `json:"emailAddress"`
+	Email         string `json:"email"`
 	StreetAddress string `json:"streetAddress"`
 	City          string `json:"city"`
 	PostCode      string `json:"postCode"`
 }
 
-func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bool, verified chan bool) (*widget.PopUp, error) {
+func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bool) (*widget.PopUp, chan bool, error) {
 	items := []fyne.CanvasObject{}
+	verified := make(chan bool)
 	entries, err := fields.MapNamesGetInputs()
 	if err != nil {
-		return nil, err
+		return nil, verified, err
 	}
 
 	items = append(items, fields.GetInputsWithLabels()...)
@@ -44,27 +45,30 @@ func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bo
 
 			err := gob.NewEncoder(dataForTransport).Encode(sliceOfEntries)
 			if err != nil {
+				fmt.Println(err)
 				return
 			}
 
-			var res *http.Response
+			// var res *http.Response
 
 			if toRegister {
-				res, err = http.Post("endpoint", "application/json", dataForTransport)
-				if err != nil {
-					return
-				}
+				verified <- true
+				// res, err = http.Post("endpoint", "application/json", dataForTransport)
+				// if err != nil {
+				// 	return
+				// }
 			} else {
-				res, err = http.Post("endpoint", "application/json", dataForTransport)
-				if err != nil {
-					return
-				}
+				verified <- true
+				// res, err = http.Post("endpoint", "application/json", dataForTransport)
+				// if err != nil {
+				// 	return
+				// }
 			}
 
 			// TODO: Add this in
-			if res.StatusCode == 200 {
-				verified <- true
-			}
+			// if res.StatusCode == 200 {
+
+			// }
 		}),
 		btn,
 	)
@@ -80,5 +84,5 @@ func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bo
 	popupMenu := widget.NewModalPopUp(contents, c)
 	popupMenu.Resize(popupMenuSize) // Set the size of the modal popup
 
-	return popupMenu, nil
+	return popupMenu, verified, nil
 }
