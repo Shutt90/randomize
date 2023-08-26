@@ -22,12 +22,11 @@ type register struct {
 	PostCode      string `json:"postCode"`
 }
 
-func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bool) (*widget.PopUp, chan bool, error) {
+func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bool) (*widget.PopUp, error) {
 	items := []fyne.CanvasObject{}
-	verified := make(chan bool)
 	entries, err := fields.MapNamesGetInputs()
 	if err != nil {
-		return nil, verified, err
+		return nil, err
 	}
 
 	items = append(items, fields.GetInputsWithLabels()...)
@@ -52,20 +51,17 @@ func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bo
 			// var res *http.Response
 
 			if toRegister {
-				verified <- true
 				// res, err = http.Post("endpoint", "application/json", dataForTransport)
 				// if err != nil {
 				// 	return
 				// }
 			} else {
-				verified <- true
 				// res, err = http.Post("endpoint", "application/json", dataForTransport)
 				// if err != nil {
 				// 	return
 				// }
 			}
 
-			// TODO: Add this in
 			// if res.StatusCode == 200 {
 
 			// }
@@ -84,5 +80,5 @@ func CreatePopup(c fyne.Canvas, btn *widget.Button, fields Fields, toRegister bo
 	popupMenu := widget.NewModalPopUp(contents, c)
 	popupMenu.Resize(popupMenuSize) // Set the size of the modal popup
 
-	return popupMenu, verified, nil
+	return popupMenu, nil
 }
